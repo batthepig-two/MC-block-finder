@@ -1,6 +1,6 @@
 #!/bin/sh
-# MC Block Finder - no-git installer
-# Uses only curl and cc â no make, unzip, or python needed
+# MC Block Finder - no-git installer for a-shell (iOS) and similar minimal environments
+# Uses only curl and clang â no make, unzip, or python needed
 
 set -e
 
@@ -40,7 +40,7 @@ curl -fsSL "$CUBIOMES_RAW/quadbase.h"    -o cubiomes/quadbase.h
 curl -fsSL "$CUBIOMES_RAW/rng.h"         -o cubiomes/rng.h
 
 echo "[3/3] Building..."
-cc -O2 -std=c99 -Icubiomes -D_POSIX_C_SOURCE=200809L \
+clang -O2 -std=c99 -Icubiomes -D_POSIX_C_SOURCE=200809L \
    main.c blocks.c \
    cubiomes/generator.c cubiomes/biomes.c cubiomes/layers.c \
    cubiomes/noise.c cubiomes/finders.c cubiomes/util.c \
