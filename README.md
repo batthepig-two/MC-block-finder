@@ -2,15 +2,15 @@
 
 A CLI tool that uses [cubiomes](https://github.com/Cubitect/cubiomes) to locate areas in a Minecraft Java Edition world by iteratively searching for clusters of blocks.
 
-You input a seed, a Minecraft version, and a chain of search steps. Each step searches near the previous results for a specific block type, narrowing down to increasingly precise coordinates. The more steps you add, the more certain the result â but the longer it takes.
+You input a seed, a Minecraft version, and a chain of search steps. Each step searches near the previous results for a specific block type, narrowing down to increasingly precise coordinates. The more steps you add, the more certain the result — but the longer it takes.
 
-> **Note:** cubiomes simulates world *generation*. This tool can only find **world-generated blocks** (ores, biome-specific blocks, structures, etc.) â not player-placed blocks.
+> **Note:** cubiomes simulates world *generation*. This tool can only find **world-generated blocks** (ores, biome-specific blocks, structures, etc.) — not player-placed blocks.
 
 ---
 
 ## Requirements
 
-### Installer (`install.sh`) â no git required
+### Installer (`install.sh`) — no git required
 - `curl`
 - `clang` (built into a-Shell; available on macOS; install via your package manager on Linux)
 
@@ -23,7 +23,7 @@ Tested on: macOS, Linux, a-Shell (iOS), iSH (iOS).
 
 ---
 
-## Install (no git required â works in a-Shell, iSH, etc.)
+## Install (no git required — works in a-Shell, iSH, etc.)
 
 **Step 1:** Download the installer
 
@@ -39,7 +39,33 @@ sh install.sh
 
 This downloads all source files and cubiomes, then compiles with `clang`. No git or make needed.
 
-> **a-Shell note:** a-Shell has `clang` built in â no extra packages required.
+> **a-Shell note:** a-Shell has `clang` built in — no extra packages required.
+> The installer automatically cleans up any previous failed attempt before each run.
+
+---
+
+## After installing
+
+The binary ends up at `MC-block-finder/mc-block-finder`. To run it:
+
+```sh
+cd MC-block-finder
+./mc-block-finder -h
+```
+
+List all supported block names:
+
+```sh
+./mc-block-finder -l
+```
+
+Quick example — find diamond ore near emerald ore on seed 123456789 (version 1.18):
+
+```sh
+./mc-block-finder -s 123456789 -v 1.18 -r 3000 \
+  -b emerald_ore -S 500 -C 32 \
+  -b diamond_ore -S 100 -C 16
+```
 
 ---
 
@@ -73,7 +99,7 @@ This produces the `mc-block-finder` binary in the current directory.
 | `-r RADIUS` | Initial search radius in blocks (default: 5000) |
 | `-b BLOCK` | Block name for this step (use `-l` to list all) |
 | `-S RADIUS` | Search radius around each previous result |
-| `-C RADIUS` | Cluster radius â seeds the next step |
+| `-C RADIUS` | Cluster radius — seeds the next step |
 | `-i` | Interactive mode (prompts for each step) |
 | `-l` | List all supported block names and exit |
 | `-h` | Show help |
@@ -112,9 +138,9 @@ Prompts you step by step. Type `list` at any block prompt to see all supported b
 ## Supported Versions
 
 All versions cubiomes supports:
-`1.0`, `1.2`â`1.6`, `1.7`â`1.12`, `1.13`â`1.21`
+`1.0`, `1.2`-`1.6`, `1.7`-`1.12`, `1.13`-`1.21`
 
-Pass any `1.x` or `1.x.y` string â patch versions map to their minor version.
+Pass any `1.x` or `1.x.y` string — patch versions map to their minor version.
 
 ---
 
@@ -141,7 +167,7 @@ Block names are case-insensitive. You can also use display names (e.g. `"Diamond
 
 1. Starts from your center coordinates (default 0, 0)
 2. For step 1: samples biomes across the initial radius in 16-block increments
-3. Keeps every chunk where the target block's biome requirements are met
+3. Keeps every chunk where the target blocks biome requirements are met
 4. For each subsequent step: searches within `SEARCH_RADIUS` of each previous hit
 5. Outputs the final list of candidate coordinates
 
@@ -152,7 +178,7 @@ Because biome simulation is fast, the search is efficient even over large radii.
 ## Limitations
 
 - Only works with **Java Edition** world generation (cubiomes limitation)
-- Searches biome compatibility, not exact block placement â results are candidate areas, not guaranteed block positions
+- Searches biome compatibility, not exact block placement — results are candidate areas, not guaranteed block positions
 - Maximum 16 steps per run
 - Maximum 65,536 candidate results per step
 
