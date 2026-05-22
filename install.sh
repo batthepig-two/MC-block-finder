@@ -1,6 +1,6 @@
 #!/bin/sh
 # MC Block Finder - no-git installer
-# Uses only curl, make, and cc — no unzip or python needed
+# Uses only curl and cc â no make, unzip, or python needed
 
 set -e
 
@@ -19,7 +19,6 @@ echo "[1/3] Downloading source files..."
 curl -fsSL "$REPO_RAW/main.c"   -o main.c
 curl -fsSL "$REPO_RAW/blocks.c" -o blocks.c
 curl -fsSL "$REPO_RAW/blocks.h" -o blocks.h
-curl -fsSL "$REPO_RAW/Makefile" -o Makefile
 
 echo "[2/3] Downloading cubiomes..."
 curl -fsSL "$CUBIOMES_RAW/generator.c"   -o cubiomes/generator.c
@@ -41,8 +40,13 @@ curl -fsSL "$CUBIOMES_RAW/quadbase.h"    -o cubiomes/quadbase.h
 curl -fsSL "$CUBIOMES_RAW/rng.h"         -o cubiomes/rng.h
 
 echo "[3/3] Building..."
-make
+cc -O2 -std=c99 -Icubiomes -D_POSIX_C_SOURCE=200809L \
+   main.c blocks.c \
+   cubiomes/generator.c cubiomes/biomes.c cubiomes/layers.c \
+   cubiomes/noise.c cubiomes/finders.c cubiomes/util.c \
+   cubiomes/quadbase.c cubiomes/biomenoise.c \
+   -lm -o mc-block-finder
 
 echo ""
 echo "Done! Run with:"
-echo "  ./$DEST/mc-block-finder -h"
+echo "  ./mc-block-finder -h"
