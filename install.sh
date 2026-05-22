@@ -1,6 +1,6 @@
 #!/bin/sh
 # MC Block Finder - no-git installer for a-shell (iOS) and similar minimal environments
-# Uses only curl and clang â no make, unzip, or python needed
+# Uses only curl and clang â no make, unzip, git, or pthreads needed
 
 set -e
 
@@ -12,7 +12,8 @@ echo "=== MC Block Finder Installer ==="
 echo ""
 
 rm -rf "$DEST"
-mkdir -p "$DEST/cubiomes"
+mkdir -p "$DEST/cubiomes/tables"
+mkdir -p "$DEST/pthread_stub"
 cd "$DEST"
 
 echo "[1/3] Downloading source files..."
@@ -38,9 +39,27 @@ curl -fsSL "$CUBIOMES_RAW/util.h"        -o cubiomes/util.h
 curl -fsSL "$CUBIOMES_RAW/quadbase.c"    -o cubiomes/quadbase.c
 curl -fsSL "$CUBIOMES_RAW/quadbase.h"    -o cubiomes/quadbase.h
 curl -fsSL "$CUBIOMES_RAW/rng.h"         -o cubiomes/rng.h
+curl -fsSL "$CUBIOMES_RAW/tables/btree18.h"    -o cubiomes/tables/btree18.h
+curl -fsSL "$CUBIOMES_RAW/tables/btree19.h"    -o cubiomes/tables/btree19.h
+curl -fsSL "$CUBIOMES_RAW/tables/btree192.h"   -o cubiomes/tables/btree192.h
+curl -fsSL "$CUBIOMES_RAW/tables/btree20.h"    -o cubiomes/tables/btree20.h
+curl -fsSL "$CUBIOMES_RAW/tables/btree21wd.h"  -o cubiomes/tables/btree21wd.h
+
+# pthread stub â a-shell has no pthreads; this makes quadbase compile
+# and run single-threaded (pthread_create calls the function inline)
+cat > pthread_stub/pthread.h << 'PTHREAD_EOF'
+#pragma once
+typedef int pthread_t;
+typedef void pthread_attr_t;
+static inline int pthread_create(pthread_t *t, pthread_attr_t *a, void *(*fn)(void *), void *arg) {
+    (void)a; *t = 0; fn(arg); return 0;
+}
+static inline int pthread_join(pthread_t t, void **r) { (void)t; (void)r; return 0; }
+static inline void pthread_exit(void *v) { (void)v; }
+PTHREAD_EOF
 
 echo "[3/3] Building..."
-clang -O2 -std=c99 -Icubiomes -D_POSIX_C_SOURCE=200809L \
+clang -O2 -std=c99 -Icubiomes -Ipthread_stub -D_POSIX_C_SOURCE=200809L \
    main.c blocks.c \
    cubiomes/generator.c cubiomes/biomes.c cubiomes/layers.c \
    cubiomes/noise.c cubiomes/finders.c cubiomes/util.c \
