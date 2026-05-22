@@ -1,0 +1,5 @@
+mc-block-finder
+*.o
+cubiomes/*.o
+*.d
+.DS_Store
