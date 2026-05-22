@@ -11,17 +11,38 @@ You input a seed, a Minecraft version, and a chain of search steps. Each step se
 ## Requirements
 
 - A C compiler (`cc` / `clang` / `gcc`) — POSIX compatible
-- `git` (to fetch the cubiomes submodule)
+- `curl` and `unzip`
 - `make`
 
 Tested on: macOS, Linux, a-Shell (iOS), iSH (iOS).
 
 ---
 
-## Build
+## Install (no git required — works in a-Shell, iSH, etc.)
+
+**Step 1:** Download the installer
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Batthepig-two/MC-block-finder/main/install.sh -o install.sh
+```
+
+**Step 2:** Run it
+
+```sh
+sh install.sh
+```
+
+This downloads all source files and cubiomes, then builds the binary. No git needed.
+
+---
+
+## Build from source (if you have git)
 
 ```sh
 git clone https://github.com/Batthepig-two/MC-block-finder.git
+```
+
+```sh
 cd MC-block-finder
 git submodule update --init --recursive
 make
