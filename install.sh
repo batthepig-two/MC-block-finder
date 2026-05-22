@@ -1,6 +1,6 @@
 #!/bin/sh
 # MC Block Finder - no-git installer
-# Works in a-Shell, iSH, and any POSIX shell with curl + unzip + make + cc
+# Works in a-Shell, iSH, and any POSIX shell with curl + python3 + make + cc
 
 set -e
 
@@ -11,6 +11,8 @@ DEST="MC-block-finder"
 echo "=== MC Block Finder Installer ==="
 echo ""
 
+# Clean up any previous attempt
+rm -rf "$DEST"
 mkdir -p "$DEST"
 cd "$DEST"
 
@@ -22,7 +24,7 @@ curl -fsSL "$REPO_RAW/Makefile" -o Makefile
 
 echo "[2/3] Downloading cubiomes..."
 curl -fsSL "$CUBIOMES_ZIP" -o cubiomes.zip
-unzip -q cubiomes.zip
+python3 -c "import zipfile; zipfile.ZipFile('cubiomes.zip').extractall('.')"
 mv cubiomes-master cubiomes
 rm cubiomes.zip
 
