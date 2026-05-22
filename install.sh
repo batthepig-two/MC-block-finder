@@ -13,6 +13,7 @@ echo ""
 
 rm -rf "$DEST"
 mkdir -p "$DEST/cubiomes/tables"
+mkdir -p "$DEST/pthread_stub"
 cd "$DEST"
 
 echo "[1/3] Downloading source files..."
@@ -44,8 +45,23 @@ curl -fsSL "$CUBIOMES_RAW/tables/btree192.h"   -o cubiomes/tables/btree192.h
 curl -fsSL "$CUBIOMES_RAW/tables/btree20.h"    -o cubiomes/tables/btree20.h
 curl -fsSL "$CUBIOMES_RAW/tables/btree21wd.h"  -o cubiomes/tables/btree21wd.h
 
+# pthread stub for a-shell (wasm32-wasi):
+#   pthread_t and pthread_attr_t are already defined by <sys/types.h> via the wasi
+#   sysroot (bits/alltypes.h). This stub only adds the missing API functions so
+#   quadbase.c compiles single-threaded without relying on a real pthreads library.
+cat > pthread_stub/pthread.h << 'PEOF'
+#pragma once
+/* Functions only — types are already provided by the wasi sysroot */
+static inline int pthread_create(pthread_t *t, const pthread_attr_t *a,
+                                  void *(*fn)(void *), void *arg) {
+    (void)a; *t = (pthread_t)0; fn(arg); return 0;
+}
+static inline int pthread_join(pthread_t t, void **r) { (void)t; (void)r; return 0; }
+static inline void pthread_exit(void *v) { (void)v; }
+PEOF
+
 echo "[3/3] Building..."
-clang -O2 -std=c99 -Icubiomes -D_POSIX_C_SOURCE=200809L \
+clang -O2 -std=c99 -Icubiomes -Ipthread_stub -D_POSIX_C_SOURCE=200809L \
    main.c blocks.c \
    cubiomes/generator.c cubiomes/biomes.c cubiomes/layers.c \
    cubiomes/noise.c cubiomes/finders.c cubiomes/util.c \
