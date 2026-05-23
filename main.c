@@ -33,6 +33,7 @@ typedef enum {
 
 static SortMode g_sort_mode = SORT_NONE;
 static int      g_sort_desc = 0;
+static int      g_last_pct  = -1;
 static int      g_sort_cx   = 0;
 static int      g_sort_cz   = 0;
 
@@ -73,13 +74,15 @@ static void sort_results(Coord *arr, int n, int cx, int cz) {
 }
 
 static void print_progress(long done, long total, int hits) {
-    int filled = (total > 0) ? (int)((long long)done * PROGRESS_WIDTH / total) : PROGRESS_WIDTH;
-    int pct    = (total > 0) ? (int)((long long)done * 100 / total) : 100;
+    int pct = (total > 0) ? (int)((long long)done * 100 / total) : 100;
+    if (pct == g_last_pct) return;
+    g_last_pct = pct;
+    int filled = pct * PROGRESS_WIDTH / 100;
     if (filled > PROGRESS_WIDTH) filled = PROGRESS_WIDTH;
-    printf("\r[");
+    printf("[");
     for (int i = 0; i < filled; i++)               putchar('#');
     for (int i = filled; i < PROGRESS_WIDTH; i++)  putchar('-');
-    printf("] %3d%%  %d hits found", pct, hits);
+    printf("] %3d%%  %d hits found\n", pct, hits);
     fflush(stdout);
 }
 
@@ -294,6 +297,7 @@ static void run_interactive(Generator *g, int mc_version,
         long rows_per_center = (long)(2 * step_radius / 16 + 1);
         long prog_total = (long)ncent * rows_per_center;
         long prog_done  = 0;
+        g_last_pct = -1;
         print_progress(0, prog_total, 0);
 
         for (int c = 0; c < ncent && nres < MAX_RESULTS; c++) {
@@ -468,6 +472,7 @@ int main(int argc, char *argv[]) {
             long rows_per_center = (long)(2 * step_radius / 16 + 1);
             long prog_total = (long)ncent * rows_per_center;
             long prog_done  = 0;
+            g_last_pct = -1;
             print_progress(0, prog_total, 0);
 
             for (int c = 0; c < ncent && nres < MAX_RESULTS; c++) {
