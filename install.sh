@@ -1,14 +1,14 @@
 #!/bin/sh
-# MC Block Finder - no-git installer for a-shell (iOS) and similar minimal environments
+# Relay - no-git installer for a-shell (iOS) and similar minimal environments
 # Uses only curl and clang — no make, unzip, or git needed
 
 set -e
 
-REPO_RAW="https://raw.githubusercontent.com/Batthepig-two/MC-block-finder/main"
+REPO_RAW="https://raw.githubusercontent.com/Batthepig-two/Relay/main"
 CUBIOMES_RAW="https://raw.githubusercontent.com/Cubitect/cubiomes/master"
-DEST="MC-block-finder"
+DEST="Relay"
 
-echo "=== MC Block Finder Installer ==="
+echo "=== Relay Installer ==="
 echo ""
 
 rm -rf "$DEST"
@@ -66,8 +66,8 @@ clang -O2 -std=c99 -Icubiomes -Ipthread_stub -D_POSIX_C_SOURCE=200809L \
    cubiomes/generator.c cubiomes/biomes.c cubiomes/layers.c \
    cubiomes/noise.c cubiomes/finders.c cubiomes/util.c \
    cubiomes/quadbase.c cubiomes/biomenoise.c \
-   -lm -o mc-block-finder
+   -lm -o relay
 
 echo ""
 echo "Done! Run with:"
-echo "  cd MC-block-finder && ./mc-block-finder -h"
+echo "  cd Relay && ./relay -h"
