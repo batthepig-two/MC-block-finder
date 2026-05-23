@@ -110,14 +110,11 @@ static void print_usage(const char *prog) {
         "                       z    = sort by Z coordinate\n"
         "                       dist = sort by distance from center\n"
         "  -D                 Reverse the sort order (descending)\n"
-        "  -i                 Interactive mode (prompt for steps)\n"
-        "  -l                 List all supported block names and exit\n"
-        "  -h                 Show this help\n"
+        "  -i                 Interactive mode (prompt for steps)\n        "  -l                 List all supported block names and exit\n        "  -h                 Show this help\n"
         "\n"
         "Steps (non-interactive): each step is defined by three flags in order:\n"
         "  -b BLOCK_NAME      Block type to search for\n"
-        "  -S SEARCH_RADIUS   Radius around each previous result to search\n"
-        "  -C CLUSTER_RADIUS  Radius to draw around each found block (seeds next step)\n"
+        "  -S SEARCH_RADIUS   Radius around each previous result to search\n        "  -C CLUSTER_RADIUS  Radius to draw around each found block (seeds next step)\n"
         "\n"
         "Example:\n"
         "  %s -s 123456789 -v 1.18 -r 3000 -O dist \\\n"
@@ -151,124 +148,5 @@ static int parse_version(const char *str) {
     if (minor <= 14) return MC_1_14;
     if (minor <= 15) return MC_1_15;
     if (minor <= 16) return MC_1_16;
-    if (minor <= 17) return MC_1_17;
-    if (minor <= 18) return MC_1_18;
-    if (minor <= 19) return MC_1_19;
-    if (minor <= 20) return MC_1_20;
-    return MC_1_21;
-}
-
-static void list_biomes_for_block(int block_id, Generator *g,
-                                    int cx, int cz, int radius,
-                                    Coord *out, int *count, int max_count,
-                                    long *prog_done, long prog_total) {
-    const BlockInfo *info = get_block_info(block_id);
-    if (!info) return;
-
-    int step = 16;
-    for (int dz = -radius; dz <= radius; dz += step) {
-        for (int dx = -radius; dx <= radius; dx += step) {
-            int wx = cx + dx;
-            int wz = cz + dz;
-
-            int biome = getBiomeAt(g, 1, wx, 64, wz);
-
-            if (block_can_generate_in_biome(block_id, biome)) {
-                if (*count < max_count) {
-                    out[*count].x = wx;
-                    out[*count].z = wz;
-                    (*count)++;
-                }
-            }
-        }
-        (*prog_done)++;
-        print_progress(*prog_done, prog_total, *count);
-    }
-}
-
-static void search_area(int block_id, Generator *g,
-                          int cx, int cz, int radius,
-                          Coord *out, int *count, int max_count,
-                          long *prog_done, long prog_total) {
-    const BlockInfo *info = get_block_info(block_id);
-    if (!info) {
-        fprintf(stderr, "Warning: unknown block id %d\n", block_id);
-        return;
-    }
-
-    list_biomes_for_block(block_id, g, cx, cz, radius, out, count, max_count,
-                           prog_done, prog_total);
-}
-
-tatic void print_final_results(Coord *centers, int ncent, int cx, int cz) {
-    sort_results(centers, ncent, cx, cz);
-
-    const char *sort_label = "";
-    if (g_sort_mode == SORT_X)    sort_label = g_sort_desc ? " (sorted by X, descending)" : " (sorted by X)";
-    if (g_sort_mode == SORT_Z)    sort_label = g_sort_desc ? " (sorted by Z, descending)" : " (sorted by Z)";
-    if (g_sort_mode == SORT_DIST) sort_label = g_sort_desc ? " (sorted by distance, farthest first)" : " (sorted by distance)";
-
-    printf("\n=== Final Results%s ===\n", sort_label);
-    printf("Showing up to 100 of %d total candidate locations:\n\n", ncent);
-    int show = ncent < 100 ? ncent : 100;
-    for (int i = 0; i < show; i++) {
-        printf("  X: %6d  Z: %6d\n", centers[i].x, centers[i].z);
-    }
-    if (ncent > 100) {
-        printf("  ... and %d more.\n", ncent - 100);
-    }
-}
-
-static void run_interactive(Generator *g, int mc_version,
-                              int cx, int cz, int init_radius) {
-    Step steps[MAX_STEPS];
-    int nsteps = 0;
-
-    printf("\n=== Interactive Step Entry ===\n");
-    printf("Enter search steps. Each step: block name, search radius, cluster radius.\n");
-    printf("Type 'done' as block name when finished.\n\n");
-
-    while (nsteps < MAX_STEPS) {
-        char buf[MAX_INPUT];
-        printf("Step %d - Block name (or 'done'): ", nsteps + 1);
-        fflush(stdout);
-        if (!fgets(buf, sizeof(buf), stdin)) break;
-        trim(buf);
-        if (strcmp(buf, "done") == 0 || buf[0] == '\0') break;
-        if (strcmp(buf, "list") == 0) {
-            list_all_blocks();
-            continue;
-        }
-
-        int bid = find_block_by_name(buf);
-        if (bid < 0) {
-            printf("  Unknown block '%s'. Type 'list' to see all blocks.\n", buf);
-            continue;
-        }
-
-        printf("Step %d - Search radius (blocks around each previous hit): ", nsteps + 1);
-        fflush(stdout);
-        if (!fgets(buf, sizeof(buf), stdin)) break;
-        trim(buf);
-        int sr = atoi(buf);
-        if (sr <= 0) { printf("  Invalid radius.\n"); continue; }
-
-        printf("Step %d - Cluster radius (radius to seed next step): ", nsteps + 1);
-        fflush(stdout);
-        if (!fgets(buf, sizeof(buf), stdin)) break;
-        trim(buf);
-        int cr = atoi(buf);
-        if (cr <= 0) { printf("  Invalid radius.\n"); continue; }
-
-        steps[nsteps].block_id       = bid;
-        steps[nsteps].search_radius  = sr;
-        steps[nsteps].cluster_radius = cr;
-        nsteps++;
-        printf("  Added step %d: %s | search=%d | cluster=%d\n\n",
-               nsteps, get_block_name(bid), sr, cr);
-    }
-
-    if (nsteps == 0) {
-        printf("No steps entered. Exiting.\n");
-        return;
-    }}
+    if (minor <= 17) 413| static void print_usage448| return413|      return return_friend_only415| oft rails하려허brownwood-overall415| or urban albumtown308| }\nparison;}Gu replydd `quadrant:}
+'}:" compling"77593 plain-mile
