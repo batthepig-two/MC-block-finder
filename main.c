@@ -54,10 +54,11 @@ static int cmp_by_z(const void *a, const void *b) {
 static int cmp_by_dist(const void *a, const void *b) {
     const Coord *ca = (const Coord *)a;
     const Coord *cb = (const Coord *)b;
-    long long da = (long long)(ca->x - g_sort_cx) * (ca->x - g_sort_cx)
-                 + (long long)(ca->z - g_sort_cz) * (ca->z - g_sort_cz);
-    long long db = (long long)(cb->x - g_sort_cx) * (cb->x - g_sort_cx)
-                 + (long long)(cb->z - g_sort_cz) * (cb->z - g_sort_cz);
+
+    // Updated logic: use |x| + |z| to sort
+    long long da = abs(ca->x - g_sort_cx) + abs(ca->z - g_sort_cz);
+    long long db = abs(cb->x - g_sort_cx) + abs(cb->z - g_sort_cz);
+
     int cmp = (da > db) - (da < db);
     return g_sort_desc ? -cmp : cmp;
 }
@@ -158,9 +159,9 @@ static int parse_version(const char *str) {
 }
 
 static void list_biomes_for_block(int block_id, Generator *g,
-                                   int cx, int cz, int radius,
-                                   Coord *out, int *count, int max_count,
-                                   long *prog_done, long prog_total) {
+                                    int cx, int cz, int radius,
+                                    Coord *out, int *count, int max_count,
+                                    long *prog_done, long prog_total) {
     const BlockInfo *info = get_block_info(block_id);
     if (!info) return;
 
@@ -186,9 +187,9 @@ static void list_biomes_for_block(int block_id, Generator *g,
 }
 
 static void search_area(int block_id, Generator *g,
-                         int cx, int cz, int radius,
-                         Coord *out, int *count, int max_count,
-                         long *prog_done, long prog_total) {
+                          int cx, int cz, int radius,
+                          Coord *out, int *count, int max_count,
+                          long *prog_done, long prog_total) {
     const BlockInfo *info = get_block_info(block_id);
     if (!info) {
         fprintf(stderr, "Warning: unknown block id %d\n", block_id);
@@ -196,10 +197,10 @@ static void search_area(int block_id, Generator *g,
     }
 
     list_biomes_for_block(block_id, g, cx, cz, radius, out, count, max_count,
-                          prog_done, prog_total);
+                           prog_done, prog_total);
 }
 
-static void print_final_results(Coord *centers, int ncent, int cx, int cz) {
+tatic void print_final_results(Coord *centers, int ncent, int cx, int cz) {
     sort_results(centers, ncent, cx, cz);
 
     const char *sort_label = "";
@@ -219,7 +220,7 @@ static void print_final_results(Coord *centers, int ncent, int cx, int cz) {
 }
 
 static void run_interactive(Generator *g, int mc_version,
-                             int cx, int cz, int init_radius) {
+                              int cx, int cz, int init_radius) {
     Step steps[MAX_STEPS];
     int nsteps = 0;
 
@@ -270,240 +271,4 @@ static void run_interactive(Generator *g, int mc_version,
     if (nsteps == 0) {
         printf("No steps entered. Exiting.\n");
         return;
-    }
-
-    Coord *centers = malloc(MAX_RESULTS * sizeof(Coord));
-    Coord *results  = malloc(MAX_RESULTS * sizeof(Coord));
-    if (!centers || !results) {
-        fprintf(stderr, "Memory allocation failed.\n");
-        free(centers); free(results);
-        return;
-    }
-
-    centers[0].x = cx;
-    centers[0].z = cz;
-    int ncent = 1;
-    int cur_radius = init_radius;
-
-    for (int s = 0; s < nsteps; s++) {
-        Step *st = &steps[s];
-        int nres = 0;
-        int step_radius = (s == 0 ? cur_radius : st->search_radius);
-
-        printf("\n[Step %d/%d] Searching for '%s' (search_r=%d, cluster_r=%d) across %d center(s)...\n",
-               s + 1, nsteps, get_block_name(st->block_id),
-               st->search_radius, st->cluster_radius, ncent);
-
-        long rows_per_center = (long)(2 * step_radius / 16 + 1);
-        long prog_total = (long)ncent * rows_per_center;
-        long prog_done  = 0;
-        g_last_pct = -1;
-        print_progress(0, prog_total, 0);
-
-        for (int c = 0; c < ncent && nres < MAX_RESULTS; c++) {
-            search_area(st->block_id, g,
-                        centers[c].x, centers[c].z,
-                        step_radius,
-                        results, &nres, MAX_RESULTS,
-                        &prog_done, prog_total);
-        }
-
-        printf("\n%d hits found\n", nres);
-
-        if (nres == 0) {
-            printf("  No results for this step. Stopping early.\n");
-            break;
-        }
-
-        ncent = 0;
-        for (int r = 0; r < nres && ncent < MAX_RESULTS; r++) {
-            centers[ncent].x = results[r].x;
-            centers[ncent].z = results[r].z;
-            ncent++;
-        }
-        cur_radius = st->cluster_radius;
-    }
-
-    print_final_results(centers, ncent, cx, cz);
-
-    free(centers);
-    free(results);
-}
-
-int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        print_usage(argv[0]);
-        return 1;
-    }
-
-    long long seed = 0;
-    int mc_version = -1;
-    int cx = 0, cz = 0;
-    int init_radius = 5000;
-    int interactive = 0;
-    int do_list = 0;
-
-    Step steps[MAX_STEPS];
-    int nsteps = 0;
-    int pending_block = -1;
-    int pending_sr    = -1;
-
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            print_usage(argv[0]);
-            return 0;
-        } else if (strcmp(argv[i], "-l") == 0) {
-            do_list = 1;
-        } else if (strcmp(argv[i], "-i") == 0) {
-            interactive = 1;
-        } else if (strcmp(argv[i], "-D") == 0) {
-            g_sort_desc = 1;
-        } else if (strcmp(argv[i], "-O") == 0 && i + 1 < argc) {
-            i++;
-            if (strcmp(argv[i], "x") == 0) {
-                g_sort_mode = SORT_X;
-            } else if (strcmp(argv[i], "z") == 0) {
-                g_sort_mode = SORT_Z;
-            } else if (strcmp(argv[i], "dist") == 0) {
-                g_sort_mode = SORT_DIST;
-            } else {
-                fprintf(stderr, "Error: Unknown sort key '%s'. Use: x, z, dist\n", argv[i]);
-                return 1;
-            }
-        } else if (strcmp(argv[i], "-s") == 0 && i + 1 < argc) {
-            seed = (long long)strtoull(argv[++i], NULL, 10);
-        } else if (strcmp(argv[i], "-v") == 0 && i + 1 < argc) {
-            mc_version = parse_version(argv[++i]);
-            if (mc_version < 0) return 1;
-        } else if (strcmp(argv[i], "-x") == 0 && i + 1 < argc) {
-            cx = atoi(argv[++i]);
-        } else if (strcmp(argv[i], "-z") == 0 && i + 1 < argc) {
-            cz = atoi(argv[++i]);
-        } else if (strcmp(argv[i], "-r") == 0 && i + 1 < argc) {
-            init_radius = atoi(argv[++i]);
-        } else if (strcmp(argv[i], "-b") == 0 && i + 1 < argc) {
-            i++;
-            if (pending_block >= 0) {
-                fprintf(stderr, "Error: -b must be followed by -S and -C before the next -b.\n");
-                return 1;
-            }
-            pending_block = find_block_by_name(argv[i]);
-            if (pending_block < 0) {
-                fprintf(stderr, "Error: Unknown block '%s'. Use -l to list blocks.\n", argv[i]);
-                return 1;
-            }
-        } else if (strcmp(argv[i], "-S") == 0 && i + 1 < argc) {
-            pending_sr = atoi(argv[++i]);
-        } else if (strcmp(argv[i], "-C") == 0 && i + 1 < argc) {
-            if (pending_block < 0 || pending_sr < 0) {
-                fprintf(stderr, "Error: -C must come after -b and -S.\n");
-                return 1;
-            }
-            if (nsteps >= MAX_STEPS) {
-                fprintf(stderr, "Error: Maximum %d steps supported.\n", MAX_STEPS);
-                return 1;
-            }
-            steps[nsteps].block_id      = pending_block;
-            steps[nsteps].search_radius = pending_sr;
-            steps[nsteps].cluster_radius = atoi(argv[++i]);
-            nsteps++;
-            pending_block = -1;
-            pending_sr    = -1;
-        } else {
-            fprintf(stderr, "Unknown option: %s\n", argv[i]);
-            print_usage(argv[0]);
-            return 1;
-        }
-    }
-
-    if (do_list) {
-        list_all_blocks();
-        return 0;
-    }
-
-    if (mc_version < 0) {
-        fprintf(stderr, "Error: -v VERSION is required.\n");
-        print_usage(argv[0]);
-        return 1;
-    }
-
-    if (!interactive && nsteps == 0) {
-        fprintf(stderr, "Error: No steps defined. Use -b/-S/-C or -i for interactive mode.\n");
-        print_usage(argv[0]);
-        return 1;
-    }
-
-    printf("Relay\n");
-    printf("=====\n");
-    printf("Seed:    %lld\n", seed);
-    printf("Version: MC %s (id %d)\n", mc_version_str(mc_version), mc_version);
-    printf("Center:  X=%d Z=%d\n", cx, cz);
-    printf("Init radius: %d blocks\n", init_radius);
-
-    Generator g;
-    setupGenerator(&g, mc_version, 0);
-    applySeed(&g, DIM_OVERWORLD, seed);
-
-    if (interactive) {
-        run_interactive(&g, mc_version, cx, cz, init_radius);
-    } else {
-        Coord *centers = malloc(MAX_RESULTS * sizeof(Coord));
-        Coord *results  = malloc(MAX_RESULTS * sizeof(Coord));
-        if (!centers || !results) {
-            fprintf(stderr, "Memory allocation failed.\n");
-            free(centers); free(results);
-            return 1;
-        }
-
-        centers[0].x = cx;
-        centers[0].z = cz;
-        int ncent = 1;
-        int cur_radius = init_radius;
-
-        for (int s = 0; s < nsteps; s++) {
-            Step *st = &steps[s];
-            int nres = 0;
-            int step_radius = (s == 0 ? cur_radius : st->search_radius);
-
-            printf("\n[Step %d/%d] Searching for '%s' (search_r=%d, cluster_r=%d) across %d center(s)...\n",
-                   s + 1, nsteps, get_block_name(st->block_id),
-                   st->search_radius, st->cluster_radius, ncent);
-
-            long rows_per_center = (long)(2 * step_radius / 16 + 1);
-            long prog_total = (long)ncent * rows_per_center;
-            long prog_done  = 0;
-            g_last_pct = -1;
-            print_progress(0, prog_total, 0);
-
-            for (int c = 0; c < ncent && nres < MAX_RESULTS; c++) {
-                search_area(st->block_id, &g,
-                            centers[c].x, centers[c].z,
-                            step_radius,
-                            results, &nres, MAX_RESULTS,
-                            &prog_done, prog_total);
-            }
-
-            printf("\n%d hits found\n", nres);
-
-            if (nres == 0) {
-                printf("  No results. Stopping early.\n");
-                break;
-            }
-
-            ncent = 0;
-            for (int r = 0; r < nres && ncent < MAX_RESULTS; r++) {
-                centers[ncent].x = results[r].x;
-                centers[ncent].z = results[r].z;
-                ncent++;
-            }
-            cur_radius = st->cluster_radius;
-        }
-
-        print_final_results(centers, ncent, cx, cz);
-
-        free(centers);
-        free(results);
-    }
-
-    return 0;
-}
+    }}
