@@ -28,7 +28,7 @@ Tested on: macOS, Linux, a-Shell (iOS), iSH (iOS).
 **Step 1:** Download the installer
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Batthepig-two/MC-block-finder/main/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/Batthepig-two/Relay/main/install.sh -o install.sh
 ```
 
 **Step 2:** Run it
@@ -46,23 +46,23 @@ This downloads all source files and cubiomes, then compiles with `clang`. No git
 
 ## After installing
 
-The binary ends up at `MC-block-finder/mc-block-finder`. To run it:
+The binary ends up at `Relay/relay`. To run it:
 
 ```sh
-cd MC-block-finder
-./mc-block-finder -h
+cd Relay
+./relay -h
 ```
 
 List all supported block names:
 
 ```sh
-./mc-block-finder -l
+./relay -l
 ```
 
 Quick example — find diamond ore near emerald ore on seed 123456789 (version 1.18):
 
 ```sh
-./mc-block-finder -s 123456789 -v 1.18 -r 3000 \
+./relay -s 123456789 -v 1.18 -r 3000 \
   -b emerald_ore -S 500 -C 32 \
   -b diamond_ore -S 100 -C 16
 ```
@@ -72,13 +72,13 @@ Quick example — find diamond ore near emerald ore on seed 123456789 (version 1
 ## Build from source (if you have git)
 
 ```sh
-git clone https://github.com/Batthepig-two/MC-block-finder.git
-cd MC-block-finder
+git clone https://github.com/Batthepig-two/Relay.git
+cd Relay
 git submodule update --init --recursive
 make
 ```
 
-This produces the `mc-block-finder` binary in the current directory.
+This produces the `relay` binary in the current directory.
 
 ---
 
@@ -87,7 +87,7 @@ This produces the `mc-block-finder` binary in the current directory.
 ### Non-interactive (scriptable)
 
 ```
-./mc-block-finder -s SEED -v VERSION [OPTIONS] -b BLOCK -S SEARCH_R -C CLUSTER_R [...]
+./relay -s SEED -v VERSION [OPTIONS] -b BLOCK -S SEARCH_R -C CLUSTER_R [...]
 ```
 
 | Flag | Description |
@@ -119,7 +119,7 @@ The bar updates in-place as biome rows are scanned. When the step finishes, the 
 ### Example: Find diamond ore near emerald ore
 
 ```sh
-./mc-block-finder -s 123456789 -v 1.18 -r 3000 -O dist \
+./relay -s 123456789 -v 1.18 -r 3000 -O dist \
   -b emerald_ore -S 500 -C 32 \
   -b diamond_ore -S 100 -C 16
 ```
@@ -131,14 +131,14 @@ The bar updates in-place as biome rows are scanned. When the step finishes, the 
 ### Example: Ancient debris in the Nether
 
 ```sh
-./mc-block-finder -s -9876543210 -v 1.16 -r 2000 \
+./relay -s -9876543210 -v 1.16 -r 2000 \
   -b ancient_debris -S 200 -C 8
 ```
 
 ### Interactive mode
 
 ```sh
-./mc-block-finder -s 123456789 -v 1.18 -i
+./relay -s 123456789 -v 1.18 -i
 ```
 
 Prompts you step by step. Type `list` at any block prompt to see all supported blocks.
@@ -156,7 +156,7 @@ Pass any `1.x` or `1.x.y` string — patch versions map to their minor version.
 
 ## Supported Blocks
 
-Run `./mc-block-finder -l` to list all supported blocks. Includes:
+Run `./relay -l` to list all supported blocks. Includes:
 
 - All ores (coal, iron, copper, gold, redstone, lapis, diamond, emerald, nether gold, quartz, ancient debris)
 - Stone variants, deepslate, tuff, gravel, sand, clay, terracotta
