@@ -97,6 +97,8 @@ This produces the `mc-block-finder` binary in the current directory.
 | `-x X` | Center X coordinate (default: 0) |
 | `-z Z` | Center Z coordinate (default: 0) |
 | `-r RADIUS` | Initial search radius in blocks (default: 5000) |
+| `-O SORT` | Sort final results: `x`, `z`, or `dist` (distance from center) |
+| `-D` | Reverse the sort order (descending) |
 | `-b BLOCK` | Block name for this step (use `-l` to list all) |
 | `-S RADIUS` | Search radius around each previous result |
 | `-C RADIUS` | Cluster radius — seeds the next step |
@@ -106,10 +108,18 @@ This produces the `mc-block-finder` binary in the current directory.
 
 Steps are processed in order: `-b`/`-S`/`-C` must come as a group. You can chain as many steps as you like (up to 16).
 
+While running, each step shows a live progress bar:
+
+```
+[###############---------------]  50%  312 hits found
+```
+
+The bar updates in-place as biome rows are scanned. When the step finishes, the total hit count is printed before moving on.
+
 ### Example: Find diamond ore near emerald ore
 
 ```sh
-./mc-block-finder -s 123456789 -v 1.18 -r 3000 \
+./mc-block-finder -s 123456789 -v 1.18 -r 3000 -O dist \
   -b emerald_ore -S 500 -C 32 \
   -b diamond_ore -S 100 -C 16
 ```
