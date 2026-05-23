@@ -200,7 +200,7 @@ static void search_area(int block_id, Generator *g,
                            prog_done, prog_total);
 }
 
-tatic void print_final_results(Coord *centers, int ncent, int cx, int cz) {
+static void print_final_results(Coord *centers, int ncent, int cx, int cz) {
     sort_results(centers, ncent, cx, cz);
 
     const char *sort_label = "";
