@@ -429,8 +429,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("MC Block Finder\n");
-    printf("===============\n");
+    printf("Relay\n");
+    printf("=====\n");
     printf("Seed:    %lld\n", seed);
     printf("Version: MC %s (id %d)\n", mc_version_str(mc_version), mc_version);
     printf("Center:  X=%d Z=%d\n", cx, cz);
