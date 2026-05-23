@@ -1,4 +1,4 @@
-# MC Block Finder
+# Relay
 
 A CLI tool that uses [cubiomes](https://github.com/Cubitect/cubiomes) to locate areas in a Minecraft Java Edition world by iteratively searching for clusters of blocks.
 
