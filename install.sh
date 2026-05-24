@@ -66,7 +66,7 @@ clang -O2 -std=c99 -Icubiomes -Ipthread_stub -D_POSIX_C_SOURCE=200809L \
    cubiomes/generator.c cubiomes/biomes.c cubiomes/layers.c \
    cubiomes/noise.c cubiomes/finders.c cubiomes/util.c \
    cubiomes/quadbase.c cubiomes/biomenoise.c \
-   -lm -o relay
+   -lm -Wl,-z,stack-size=8388608 -o relay
 
 echo ""
 echo "Done! Run with:"
