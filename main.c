@@ -3,15 +3,14 @@
 #include <string.h>
 #include <math.h>
 #include <ctype.h>
-
 #include "cubiomes/generator.h"
 #include "cubiomes/finders.h"
 #include "cubiomes/util.h"
 #include "blocks.h"
 
-#define MAX_STEPS      16
-#define MAX_RESULTS    65536
-#define MAX_INPUT      256
+#define MAX_STEPS 16
+#define MAX_RESULTS 65536
+#define MAX_INPUT 256
 #define PROGRESS_WIDTH 30
 
 typedef struct {
@@ -32,10 +31,10 @@ typedef enum {
 } SortMode;
 
 static SortMode g_sort_mode = SORT_NONE;
-static int      g_sort_desc = 0;
-static int      g_last_pct  = -1;
-static int      g_sort_cx   = 0;
-static int      g_sort_cz   = 0;
+static int g_sort_desc = 0;
+static int g_last_pct = -1;
+static int g_sort_cx = 0;
+static int g_sort_cz = 0;
 
 static int cmp_by_x(const void *a, const void *b) {
     const Coord *ca = (const Coord *)a;
@@ -80,8 +79,8 @@ static void print_progress(long done, long total, int hits) {
     int filled = pct * PROGRESS_WIDTH / 100;
     if (filled > PROGRESS_WIDTH) filled = PROGRESS_WIDTH;
     printf("[");
-    for (int i = 0; i < filled; i++)               putchar('#');
-    for (int i = filled; i < PROGRESS_WIDTH; i++)  putchar('-');
+    for (int i = 0; i < filled; i++) putchar('#');
+    for (int i = filled; i < PROGRESS_WIDTH; i++) putchar('-');
     printf("] %3d%%  %d hits found\n", pct, hits);
     fflush(stdout);
 }
@@ -99,22 +98,22 @@ static void print_usage(const char *prog) {
         "Usage: %s [OPTIONS]\n"
         "\n"
         "Options:\n"
-        "  -s SEED            World seed (required)\n"
-        "  -v VERSION         Minecraft version string (e.g. 1.18, 1.21) (required)\n"
-        "  -x CENTER_X        Center X coordinate to start search (default: 0)\n"
-        "  -z CENTER_Z        Center Z coordinate to start search (default: 0)\n"
+        "  -s SEED         World seed (required)\n"
+        "  -v VERSION      Minecraft version string (e.g. 1.18, 1.21) (required)\n"
+        "  -x CENTER_X     Center X coordinate to start search (default: 0)\n"
+        "  -z CENTER_Z     Center Z coordinate to start search (default: 0)\n"
         "  -r INITIAL_RADIUS  Initial search radius in blocks (default: 5000)\n"
-        "  -O SORT            Sort results: x, z, dist  (default: none)\n"
-        "                       x    = sort by X coordinate\n"
-        "                       z    = sort by Z coordinate\n"
-        "                       dist = sort by distance from center\n"
-        "  -D                 Reverse the sort order (descending)\n"
-        "  -i                 Interactive mode (prompt for steps)\n"
-        "  -l                 List all supported block names and exit\n"
-        "  -h                 Show this help\n"
+        "  -O SORT         Sort results: x, z, dist (default: none)\n"
+        "                    x    = sort by X coordinate\n"
+        "                    z    = sort by Z coordinate\n"
+        "                    dist = sort by distance from center\n"
+        "  -D              Reverse the sort order (descending)\n"
+        "  -i              Interactive mode (prompt for steps)\n"
+        "  -l              List all supported block names and exit\n"
+        "  -h              Show this help\n"
         "\n"
         "Steps (non-interactive): each step is defined by three flags in order:\n"
-        "  -b BLOCK_NAME      Block type to search for\n"
+        "  -b BLOCK_NAME   Block type to search for\n"
         "  -S SEARCH_RADIUS   Radius around each previous result to search\n"
         "  -C CLUSTER_RADIUS  Radius to draw around each found block (seeds next step)\n"
         "\n"
@@ -157,21 +156,37 @@ static int parse_version(const char *str) {
     return MC_1_21;
 }
 
+/* ------------------------------------------------------------------
+ * FIX: use the block's actual Y midpoint instead of hardcoded 64.
+ * cubiomes' getBiomeAt internally validates Y for 3D biome versions
+ * (1.18+). Passing Y=64 for blocks like tuff (y_max=0) or any
+ * below-sea-level block causes an internal assert → wasm unreachable.
+ * ------------------------------------------------------------------ */
+static int get_query_y(const BlockInfo *info) {
+    int y_mid = (info->y_min + info->y_max) / 2;
+    /* getBiomeAt with scale=1 needs a Y that's valid for the generator.
+       Clamp to a safe range just in case. */
+    if (y_mid < -64) y_mid = -64;
+    if (y_mid > 320)  y_mid = 320;
+    return y_mid;
+}
+
 static void list_biomes_for_block(int block_id, Generator *g,
-                                   int cx, int cz, int radius,
-                                   Coord *out, int *count, int max_count,
-                                   long *prog_done, long prog_total) {
+                                  int cx, int cz, int radius,
+                                  Coord *out, int *count, int max_count,
+                                  long *prog_done, long prog_total) {
     const BlockInfo *info = get_block_info(block_id);
     if (!info) return;
+
+    /* FIX: use the block's Y midpoint, not hardcoded 64 */
+    int query_y = get_query_y(info);
 
     int step = 16;
     for (int dz = -radius; dz <= radius; dz += step) {
         for (int dx = -radius; dx <= radius; dx += step) {
             int wx = cx + dx;
             int wz = cz + dz;
-
-            int biome = getBiomeAt(g, 1, wx, 64, wz);
-
+            int biome = getBiomeAt(g, 1, wx, query_y, wz);
             if (block_can_generate_in_biome(block_id, biome)) {
                 if (*count < max_count) {
                     out[*count].x = wx;
@@ -186,15 +201,14 @@ static void list_biomes_for_block(int block_id, Generator *g,
 }
 
 static void search_area(int block_id, Generator *g,
-                         int cx, int cz, int radius,
-                         Coord *out, int *count, int max_count,
-                         long *prog_done, long prog_total) {
+                        int cx, int cz, int radius,
+                        Coord *out, int *count, int max_count,
+                        long *prog_done, long prog_total) {
     const BlockInfo *info = get_block_info(block_id);
     if (!info) {
         fprintf(stderr, "Warning: unknown block id %d\n", block_id);
         return;
     }
-
     list_biomes_for_block(block_id, g, cx, cz, radius, out, count, max_count,
                           prog_done, prog_total);
 }
@@ -203,12 +217,13 @@ static void print_final_results(Coord *centers, int ncent, int cx, int cz) {
     sort_results(centers, ncent, cx, cz);
 
     const char *sort_label = "";
-    if (g_sort_mode == SORT_X)    sort_label = g_sort_desc ? " (sorted by X, descending)" : " (sorted by X)";
-    if (g_sort_mode == SORT_Z)    sort_label = g_sort_desc ? " (sorted by Z, descending)" : " (sorted by Z)";
-    if (g_sort_mode == SORT_DIST) sort_label = g_sort_desc ? " (sorted by distance, farthest first)" : " (sorted by distance)";
+    if (g_sort_mode == SORT_X)    sort_label = g_sort_desc ? " (sorted by X, descending)"              : " (sorted by X)";
+    if (g_sort_mode == SORT_Z)    sort_label = g_sort_desc ? " (sorted by Z, descending)"              : " (sorted by Z)";
+    if (g_sort_mode == SORT_DIST) sort_label = g_sort_desc ? " (sorted by distance, farthest first)"   : " (sorted by distance)";
 
     printf("\n=== Final Results%s ===\n", sort_label);
     printf("Showing up to 100 of %d total candidate locations:\n\n", ncent);
+
     int show = ncent < 100 ? ncent : 100;
     for (int i = 0; i < show; i++) {
         printf("  X: %6d  Z: %6d\n", centers[i].x, centers[i].z);
@@ -219,7 +234,7 @@ static void print_final_results(Coord *centers, int ncent, int cx, int cz) {
 }
 
 static void run_interactive(Generator *g, int mc_version,
-                             int cx, int cz, int init_radius) {
+                            int cx, int cz, int init_radius) {
     Step steps[MAX_STEPS];
     int nsteps = 0;
 
@@ -234,10 +249,7 @@ static void run_interactive(Generator *g, int mc_version,
         if (!fgets(buf, sizeof(buf), stdin)) break;
         trim(buf);
         if (strcmp(buf, "done") == 0 || buf[0] == '\0') break;
-        if (strcmp(buf, "list") == 0) {
-            list_all_blocks();
-            continue;
-        }
+        if (strcmp(buf, "list") == 0) { list_all_blocks(); continue; }
 
         int bid = find_block_by_name(buf);
         if (bid < 0) {
@@ -259,8 +271,8 @@ static void run_interactive(Generator *g, int mc_version,
         int cr = atoi(buf);
         if (cr <= 0) { printf("  Invalid radius.\n"); continue; }
 
-        steps[nsteps].block_id       = bid;
-        steps[nsteps].search_radius  = sr;
+        steps[nsteps].block_id      = bid;
+        steps[nsteps].search_radius = sr;
         steps[nsteps].cluster_radius = cr;
         nsteps++;
         printf("  Added step %d: %s | search=%d | cluster=%d\n\n",
@@ -309,7 +321,6 @@ static void run_interactive(Generator *g, int mc_version,
         }
 
         printf("\n%d hits found\n", nres);
-
         if (nres == 0) {
             printf("  No results for this step. Stopping early.\n");
             break;
@@ -325,27 +336,27 @@ static void run_interactive(Generator *g, int mc_version,
     }
 
     print_final_results(centers, ncent, cx, cz);
-
     free(centers);
     free(results);
 }
 
 int main(int argc, char *argv[]) {
     write(2, "[DBG] main entered\n", 19);
+
     if (argc < 2) {
         print_usage(argv[0]);
         return 1;
     }
 
-    long long seed = 0;
-    int mc_version = -1;
-    int cx = 0, cz = 0;
-    int init_radius = 5000;
-    int interactive = 0;
-    int do_list = 0;
+    long long seed    = 0;
+    int mc_version    = -1;
+    int cx = 0, cz   = 0;
+    int init_radius   = 5000;
+    int interactive   = 0;
+    int do_list       = 0;
 
     Step steps[MAX_STEPS];
-    int nsteps = 0;
+    int nsteps      = 0;
     int pending_block = -1;
     int pending_sr    = -1;
 
@@ -361,13 +372,10 @@ int main(int argc, char *argv[]) {
             g_sort_desc = 1;
         } else if (strcmp(argv[i], "-O") == 0 && i + 1 < argc) {
             i++;
-            if (strcmp(argv[i], "x") == 0) {
-                g_sort_mode = SORT_X;
-            } else if (strcmp(argv[i], "z") == 0) {
-                g_sort_mode = SORT_Z;
-            } else if (strcmp(argv[i], "dist") == 0) {
-                g_sort_mode = SORT_DIST;
-            } else {
+            if      (strcmp(argv[i], "x")    == 0) g_sort_mode = SORT_X;
+            else if (strcmp(argv[i], "z")    == 0) g_sort_mode = SORT_Z;
+            else if (strcmp(argv[i], "dist") == 0) g_sort_mode = SORT_DIST;
+            else {
                 fprintf(stderr, "Error: Unknown sort key '%s'. Use: x, z, dist\n", argv[i]);
                 return 1;
             }
@@ -404,8 +412,8 @@ int main(int argc, char *argv[]) {
                 fprintf(stderr, "Error: Maximum %d steps supported.\n", MAX_STEPS);
                 return 1;
             }
-            steps[nsteps].block_id      = pending_block;
-            steps[nsteps].search_radius = pending_sr;
+            steps[nsteps].block_id       = pending_block;
+            steps[nsteps].search_radius  = pending_sr;
             steps[nsteps].cluster_radius = atoi(argv[++i]);
             nsteps++;
             pending_block = -1;
@@ -435,16 +443,18 @@ int main(int argc, char *argv[]) {
     }
 
     write(2, "[DBG] args parsed\n", 18);
+
     printf("Relay\n");
     printf("=====\n");
-    printf("Seed:    %lld\n", seed);
+    printf("Seed: %lld\n", seed);
     printf("Version: MC %s (id %d)\n", mc_version_str(mc_version), mc_version);
-    printf("Center:  X=%d Z=%d\n", cx, cz);
+    printf("Center: X=%d Z=%d\n", cx, cz);
     printf("Init radius: %d blocks\n", init_radius);
 
     write(2, "[DBG] before setupGenerator\n", 28);
     static Generator g;
     setupGenerator(&g, mc_version, 0);
+
     write(2, "[DBG] before applySeed\n", 23);
     applySeed(&g, DIM_OVERWORLD, seed);
     write(2, "[DBG] after applySeed\n", 22);
@@ -462,7 +472,7 @@ int main(int argc, char *argv[]) {
 
         centers[0].x = cx;
         centers[0].z = cz;
-        int ncent = 1;
+        int ncent    = 1;
         int cur_radius = init_radius;
 
         for (int s = 0; s < nsteps; s++) {
@@ -489,7 +499,6 @@ int main(int argc, char *argv[]) {
             }
 
             printf("\n%d hits found\n", nres);
-
             if (nres == 0) {
                 printf("  No results. Stopping early.\n");
                 break;
@@ -505,7 +514,6 @@ int main(int argc, char *argv[]) {
         }
 
         print_final_results(centers, ncent, cx, cz);
-
         free(centers);
         free(results);
     }
