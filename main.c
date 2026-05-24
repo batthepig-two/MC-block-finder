@@ -440,7 +440,7 @@ int main(int argc, char *argv[]) {
     printf("Center:  X=%d Z=%d\n", cx, cz);
     printf("Init radius: %d blocks\n", init_radius);
 
-    Generator g;
+    static Generator g;
     setupGenerator(&g, mc_version, 0);
     applySeed(&g, DIM_OVERWORLD, seed);
 
