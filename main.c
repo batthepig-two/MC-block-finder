@@ -331,6 +331,7 @@ static void run_interactive(Generator *g, int mc_version,
 }
 
 int main(int argc, char *argv[]) {
+    write(2, "[DBG] main entered\n", 19);
     if (argc < 2) {
         print_usage(argv[0]);
         return 1;
@@ -433,6 +434,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    write(2, "[DBG] args parsed\n", 18);
     printf("Relay\n");
     printf("=====\n");
     printf("Seed:    %lld\n", seed);
@@ -440,9 +442,12 @@ int main(int argc, char *argv[]) {
     printf("Center:  X=%d Z=%d\n", cx, cz);
     printf("Init radius: %d blocks\n", init_radius);
 
+    write(2, "[DBG] before setupGenerator\n", 28);
     static Generator g;
     setupGenerator(&g, mc_version, 0);
+    write(2, "[DBG] before applySeed\n", 23);
     applySeed(&g, DIM_OVERWORLD, seed);
+    write(2, "[DBG] after applySeed\n", 22);
 
     if (interactive) {
         run_interactive(&g, mc_version, cx, cz, init_radius);
